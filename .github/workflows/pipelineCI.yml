@@ -1,45 +1,68 @@
 name: Workflow
 on:
   push:
-    branches:
-      - feat
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop, feature/* ]
 
 jobs:
-  SAST:
+# --------------------------------- BUILD ---------------------------------
+  BUILD:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0 # Necesario para el análisis de SonarCloud
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.17.0'
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: npm install
-      
-    - name: Build project
-      run: npm run build
+      - name: Instalar dependencias (si no están instaladas)
+        run: npm install
 
-    - name: Validando existencia del proyecto en sonar
-      run: |
-        set +e
-        curl -f -X POST -u '${{ secrets.SONAR_TOKEN }}:' 'https://sonarcloud.io/api/projects/create' -d 'name=laboratorio-final-2' -d 'project=laboratorio-final-2' -d 'organization=test-laboratorio' -d 'visibility=public'
-        if [ $? -ne 0 ]; then
-          echo "Proyecto ya existe en Sonarcloud"
-          echo "::set-output name=proyectoExiste::1"
-        else
-          echo "Proyecto laboratorio-final creado exitosamente en Sonarcloud"
-        
-          echo "Se establece rama main feat como rama por defecto"
-          curl -X POST -u "${{ secrets.SONAR_TOKEN }}:" 'https://sonarcloud.io/api/project_branches/rename' -d 'name=main' -d 'project=laboratorio-final-2'
-        fi
-        set -e
-    - name: Ejecutar análisis SonarCloud
-      run: |
+      - name: Compilar y empaquetar
+        run: |
+          npm run build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@master
+        with:
+          name: build-artifact
+          path: ${{ github.workspace }}/.next
+          include-hidden-files: true
+# --------------------------------- SAST ---------------------------------
+SAST:
+    needs: BUILD
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download build artifact
+        uses: actions/download-artifact@master
+        with:
+          name: build-artifact
+          path: ${{ github.workspace }}/.next
+          include-hidden-files: true
+
+      - name: Validando existencia del proyecto en sonar
+         run: |
+            set +e
+            curl -f -X POST -u '${{ secrets.SONAR_TOKEN }}:' 'https://sonarcloud.io/api/projects/create' -d 'name=laboratorio-final-2' -d 'project=laboratorio-final-2' -d 'organization=test-laboratorio' -d 'visibility=public'
+            if [ $? -ne 0 ]; then
+              echo "Proyecto ya existe en Sonarcloud"
+              echo "::set-output name=proyectoExiste::1"
+            else
+              echo "Proyecto laboratorio-final creado exitosamente en Sonarcloud"
+            
+              echo "Se establece rama main feat como rama por defecto"
+              curl -X POST -u "${{ secrets.SONAR_TOKEN }}:" 'https://sonarcloud.io/api/project_branches/rename' -d 'name=main' -d 'project=laboratorio-final-2'
+            fi
+            set -e
+
+      - name: Ejecutar análisis SonarCloud
+        run: |
           npx sonarqube-scanner \
             -Dsonar.projectKey=laboratorio-final-2\
             -Dsonar.organization=test-laboratorio\
@@ -47,8 +70,9 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
             -Dsonar.branch.name=main
-    - name: Validando resultado de SonarCloud
-      run: |
+
+      - name: Validando resultado de SonarCloud
+        run: |
           projectKey="laboratorio-final-2"
           branchName="main"
       
@@ -64,3 +88,4 @@ jobs:
           else
             echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
           fi
+# --------------------------------- SCA ---------------------------------
