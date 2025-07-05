@@ -47,7 +47,7 @@ SAST:
           include-hidden-files: true
 
       - name: Validando existencia del proyecto en sonar
-         run: |
+        run: |
             set +e
             curl -f -X POST -u '${{ secrets.SONAR_TOKEN }}:' 'https://sonarcloud.io/api/projects/create' -d 'name=laboratorio-final-2' -d 'project=laboratorio-final-2' -d 'organization=test-laboratorio' -d 'visibility=public'
             if [ $? -ne 0 ]; then
