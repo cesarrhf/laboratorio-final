@@ -235,28 +235,27 @@ jobs:
             ${{ github.workspace }}/report_md.md
             ${{ github.workspace }}/report_html.html
 
-      - name: Validar resultado de OWASP ZAP
-        shell: bash
+      - name: Validar resultado de OWASP ZAP (PowerShell)
         run: |
-          REPORT_PATH="${{ github.workspace }}/report_json.json"
+          $reportPath = "${{ github.workspace }}\report_json.json"
 
-          if [ ! -f "$REPORT_PATH" ]; then
-            echo "No se encontró el archivo report_json.json. Falla el análisis DAST."
+          if (-Not (Test-Path $reportPath)) {
+            Write-Host "No se encontró el archivo report_json.json. Falla el análisis DAST."
             exit 1
-          fi
+          }
 
-          highAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("High"))] | length' "$REPORT_PATH")
-          mediumAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("Medium"))] | length' "$REPORT_PATH")
+          $highAlerts = (Get-Content $reportPath | jq '[.site[].alerts[] | select(.riskdesc | test("High"))] | length')
+          $mediumAlerts = (Get-Content $reportPath | jq '[.site[].alerts[] | select(.riskdesc | test("Medium"))] | length')
 
-          echo "Alertas High: $highAlerts"
-          echo "Alertas Medium: $mediumAlerts"
+          Write-Host "Alertas High: $highAlerts"
+          Write-Host "Alertas Medium: $mediumAlerts"
 
-          if [ "$highAlerts" -gt 0 ] || [ "$mediumAlerts" -gt 0 ]; then
-            echo "Se encontraron vulnerabilidades críticas o medias en OWASP ZAP. Deteniendo el pipeline..."
+          if ([int]$highAlerts -gt 0 -or [int]$mediumAlerts -gt 0) {
+            Write-Host "Se encontraron vulnerabilidades críticas o medias en OWASP ZAP. Deteniendo el pipeline..."
             exit 1
-          else
-            echo "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
-          fi
+          } else {
+            Write-Host "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
+          }   fi
 
 
 # --------------------------------- DEPLOY ---------------------------------
