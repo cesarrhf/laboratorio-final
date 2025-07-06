@@ -239,7 +239,6 @@ jobs:
           docker network create zap-net
 
       - name: Limpiar contenedores antiguos
-        shell: pwsh
         run: |
           $containers = docker ps -q --filter "ancestor=cesarrhf/laboratorio-final-2:latest"
           if ($containers) {
