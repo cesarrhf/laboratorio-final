@@ -236,14 +236,17 @@ jobs:
             ${{ github.workspace }}/report_html.html
 
       - name: Validar resultado de OWASP ZAP
+        shell: bash
         run: |
-          if [ ! -f report_json.json ]; then
+          REPORT_PATH="${{ github.workspace }}/report_json.json"
+
+          if [ ! -f "$REPORT_PATH" ]; then
             echo "No se encontró el archivo report_json.json. Falla el análisis DAST."
             exit 1
           fi
 
-          highAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("High"))] | length' report_json.json)
-          mediumAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("Medium"))] | length' report_json.json)
+          highAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("High"))] | length' "$REPORT_PATH")
+          mediumAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("Medium"))] | length' "$REPORT_PATH")
 
           echo "Alertas High: $highAlerts"
           echo "Alertas Medium: $mediumAlerts"
@@ -254,5 +257,6 @@ jobs:
           else
             echo "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
           fi
+
 
 # --------------------------------- DEPLOY ---------------------------------
