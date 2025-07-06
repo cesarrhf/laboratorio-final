@@ -212,7 +212,7 @@ jobs:
 
       - name: Limpiar contenedores antiguos
         run: |
-          docker rm -f $(docker ps -q --filter "ancestor=cesarrhf/laboratorio-final-2:latest") 2>$null
+         # docker rm -f $(docker ps -q --filter "ancestor=cesarrhf/laboratorio-final-2:latest") 2>$null
 
       - name: Desplegar aplicación
         run: |
