@@ -202,7 +202,11 @@ jobs:
   DAST:
     needs: DockerBuild
     runs-on: self-hosted
-    steps:      
+    steps:
+      - name: Limpiar contenedores antiguos
+        run: |
+          docker rm -f $(docker ps -q --filter "ancestor=cesarrhf/laboratorio-final-2:latest") || true
+
       - name: Desplegar aplicación
         run: |
           docker run  -p 3000:3000  -d cesarrhf/laboratorio-final-2:latest
