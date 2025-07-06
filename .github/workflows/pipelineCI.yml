@@ -216,7 +216,7 @@ jobs:
 
       - name: Desplegar aplicación
         run: |
-          docker run  -p 3000:3000  -d cesarrhf/laboratorio-final-2:latest
+          docker run --network zap-net -p 3000:3000 -d cesarrhf/laboratorio-final-2:latest
 
       - name: Esperar que la aplicación esté lista
         run: |
