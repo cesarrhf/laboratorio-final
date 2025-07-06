@@ -224,5 +224,5 @@ jobs:
 
       - name: Escaneo con OWASP ZAP
         run: |
-          docker run --rm --network zap-net -v C:/Users/cesar/actions-runner/_work/laboratorio-final/laboratorio-final:/zap/wrk/:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3000/ -J report_json.json -w report_md.md -r report_html.html -I
+          docker run --rm --network zap-net -v ${{ github.workspace }}:/zap/wrk/:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3000/ -J report_json.json -w report_md.md -r report_html.html -I
 # --------------------------------- DEPLOY ---------------------------------
