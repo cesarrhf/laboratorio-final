@@ -195,7 +195,7 @@ jobs:
         with:
           image-ref: cesarrhf/laboratorio-final-2:latest
           format: 'json'
-          output: 'trivy-report.json'
+          output: './trivy-report.json'
           exit-code: '1'
           severity: 'CRITICAL,HIGH,MEDIUM'
 
