@@ -240,7 +240,13 @@ jobs:
 
       - name: Limpiar contenedores antiguos
         run: |
-          docker ps -q --filter "ancestor=cesarrhf/laboratorio-final-2:latest" | xargs -r docker rm -f
+          containers=$(docker ps -q --filter "ancestor=cesarrhf/laboratorio-final-2:latest")
+          if [ -n "$containers" ]; then
+            docker rm -f $containers
+            echo "Contenedores eliminados: $containers"
+          else
+            echo "No hay contenedores que eliminar"
+          fi
 
       - name: Desplegar aplicación
         run: |
