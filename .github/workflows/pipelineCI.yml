@@ -190,17 +190,40 @@ jobs:
         run: |
           docker pull cesarrhf/laboratorio-final-2:latest
 
-      - name: Run Trivy y fallar si hay vulnerabilidades
+      - name: Run Trivy Scan and check result
         run: |
-          docker run --rm -v $(pwd):/report aquasec/trivy:latest \
+          # Escanear imagen y guardar salida en archivo de texto
+          docker run --rm aquasec/trivy:latest \
             image --severity CRITICAL,HIGH,MEDIUM \
-            --format json \
+            --format table \
             cesarrhf/laboratorio-final-2:latest \
-            > trivy-report.json
+            > trivy-report.txt
 
-          count=$(jq '.Results[].Vulnerabilities | length' trivy-report.json | awk '{s+=$1} END {print s}')
-          echo "Total vulnerabilidades: $count"
-          if [ "$count" -gt 0 ]; then exit 1; fi
+          # Mostrar el contenido (opcional)
+          cat trivy-report.txt
+
+          # Subir artefacto ANTES de evaluar resultado
+          echo "::group::Subiendo artefacto"
+          mkdir -p artifact
+          cp trivy-report.txt artifact/
+          echo "::endgroup::"
+
+        # Subimos el artefacto aunque falle luego
+      - name: Upload Trivy Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: artifact/trivy-report.txt
+
+      # Validamos resultado y salimos si hay vulnerabilidades
+      - name: Check for vulnerabilities and fail if needed
+        run: |
+          if grep -qE "CRITICAL|HIGH|MEDIUM" artifact/trivy-report.txt; then
+            echo " Vulnerabilidades encontradas"
+            exit 1
+          else
+            echo " No se encontraron vulnerabilidades críticas, altas ni medias"
+          fi
 
 # --------------------------------- DAST ---------------------------------
 
