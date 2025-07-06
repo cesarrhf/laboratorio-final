@@ -205,47 +205,53 @@ jobs:
     steps:
       - name: Crear red Docker
         run: |
-          docker network rm zap-net || true
+          docker network rm zap-net 2>&1 | Out-Null
           docker network create zap-net
 
       - name: Desplegar aplicación
         run: |
-          docker run -d \
-            --rm \
-            --network zap-net \
-            --name reddit-clone-yt \
-            -p 3000:3000 \
+          docker run -d `
+            --rm `
+            --network zap-net `
+            --name reddit-clone-yt `
+            -p 3000:3000 `
             cesarrhf/laboratorio-final-2:latest
 
       - name: Esperar que la aplicación esté lista
         run: |
-          for i in {1..12}; do
-            if curl -s http://localhost:3000 > /dev/null; then
-              echo "La aplicación está lista."
-              exit 0
-            fi
-            echo "Esperando que la aplicación responda..."
-            sleep 5
-          done
-          echo "La aplicación no respondió a tiempo."
-          exit 1
+          $appReady = $false
+          for ($i = 1; $i -le 12; $i++) {
+            try {
+              Invoke-WebRequest -Uri http://localhost:3000 -UseBasicParsing -ErrorAction Stop | Out-Null
+              Write-Host "La aplicación está lista."
+              $appReady = $true
+              break
+            } catch {
+              Write-Host "Esperando que la aplicación responda..."
+              Start-Sleep -Seconds 5
+            }
+          }
+          if (-not $appReady) {
+            Write-Host "La aplicación no respondió a tiempo."
+            exit 1
+          }
 
       - name: Escaneo con OWASP ZAP
         run: |
-          docker run --rm \
-          --network zap-net \
-          -v ${{ github.workspace }}:/zap/wrk/:rw \
-          ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-          -t http://reddit-clone-yt:3000/ \
-          -J report_json.json -w report_md.md -r report_html.html \
+          docker run --rm `
+          --network zap-net `
+          -v "${{ github.workspace }}:/zap/wrk/:rw" `
+          ghcr.io/zaproxy/zaproxy:stable zap-baseline.py `
+          -t http://reddit-clone-yt:3000/ `
+          -J report_json.json -w report_md.md -r report_html.html `
           -I
 
       - name: Mover reportes de ZAP al directorio reports
         run: |
-          mkdir -p reports
-          mv report_*.json reports/ || true
-          mv report_*.md reports/ || true
-          mv report_*.html reports/ || true
+          New-Item -ItemType Directory -Path reports -Force
+          Move-Item -Path report_*.json -Destination reports/ -ErrorAction SilentlyContinue
+          Move-Item -Path report_*.md -Destination reports/ -ErrorAction SilentlyContinue
+          Move-Item -Path report_*.html -Destination reports/ -ErrorAction SilentlyContinue
 
       - name: Upload OWASP ZAP Report
         uses: actions/upload-artifact@master
@@ -255,21 +261,27 @@ jobs:
 
       - name: Validar resultado de OWASP ZAP
         run: |
-          if [ ! -f report_json.json ]; then
-            echo "No se encontró el archivo report_json.json. Falla el análisis DAST."
+          if (-Not (Test-Path report_json.json)) {
+            Write-Host "No se encontró el archivo report_json.json. Falla el análisis DAST."
             exit 1
-          fi
+          }
 
-          highAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("High"))] | length' report_json.json)
-          mediumAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("Medium"))] | length' report_json.json)
+          # Instalar jq si no está instalado
+          if (-Not (Get-Command jq -ErrorAction SilentlyContinue)) {
+            Write-Host "Instalando jq..."
+            choco install jq -y
+          }
 
-          echo "Alertas High: $highAlerts"
-          echo "Alertas Medium: $mediumAlerts"
+          $highAlerts = jq '[.site[].alerts[] | select(.riskdesc | test("High"))] | length' report_json.json
+          $mediumAlerts = jq '[.site[].alerts[] | select(.riskdesc | test("Medium"))] | length' report_json.json
 
-          if [ "$highAlerts" -gt 0 ] || [ "$mediumAlerts" -gt 0 ]; then
-            echo "Se encontraron vulnerabilidades críticas o medias en OWASP ZAP. Deteniendo el pipeline..."
+          Write-Host "Alertas High: $highAlerts"
+          Write-Host "Alertas Medium: $mediumAlerts"
+
+          if ([int]$highAlerts -gt 0 -or [int]$mediumAlerts -gt 0) {
+            Write-Host "Se encontraron vulnerabilidades críticas o medias en OWASP ZAP. Deteniendo el pipeline..."
             exit 1
-          else
-            echo "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
-          fi
+          } else {
+            Write-Host "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
+          }
 # --------------------------------- DEPLOY ---------------------------------
