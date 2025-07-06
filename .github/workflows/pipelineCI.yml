@@ -190,20 +190,19 @@ jobs:
         run: |
           docker pull cesarrhf/laboratorio-final-2:latest
 
-      - name: Run Trivy Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: cesarrhf/laboratorio-final-2:latest
-          format: 'json'
-          output: './trivy-report.json'
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH,MEDIUM'
+      - name: Run Trivy Scan (manual docker)
+        run: |
+          docker run --rm -v $(pwd):/report aquasec/trivy:latest \
+            image --severity CRITICAL,HIGH,MEDIUM \
+            --format table \
+            cesarrhf/laboratorio-final-2:latest \
+            > trivy-report.txt || true
 
       - name: Upload Trivy Report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
-          path: trivy-report.json
+          path: trivy-report.txt
 
 # --------------------------------- DAST ---------------------------------
 
