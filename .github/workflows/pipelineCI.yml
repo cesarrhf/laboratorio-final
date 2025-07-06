@@ -225,4 +225,14 @@ jobs:
       - name: Escaneo con OWASP ZAP
         run: |
           docker run --rm --network zap-net -v ${{ github.workspace }}:/zap/wrk/:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://webapp:3000/ -J report_json.json -w report_md.md -r report_html.html -I
+
+      - name: Upload OWASP ZAP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-zap-report
+          path: |
+            ${{ github.workspace }}/report_json.json
+            ${{ github.workspace }}/report_md.md
+            ${{ github.workspace }}/report_html.html
+
 # --------------------------------- DEPLOY ---------------------------------
