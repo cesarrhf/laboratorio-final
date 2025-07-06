@@ -190,13 +190,19 @@ jobs:
         run: |
           docker pull cesarrhf/laboratorio-final-2:latest
 
-      - name: Run Trivy Scan (manual docker)
+      - name: Run Trivy Scan (guardar y validar)
         run: |
           docker run --rm -v $(pwd):/report aquasec/trivy:latest \
             image --severity CRITICAL,HIGH,MEDIUM \
             --format table \
             cesarrhf/laboratorio-final-2:latest \
-            > trivy-report.txt || true
+            | tee trivy-report.txt
+
+          # Ejecutamos nuevamente para obtener código de salida
+          docker run --rm aquasec/trivy:latest \
+            image --severity CRITICAL,HIGH,MEDIUM \
+            --exit-code 1 \
+            cesarrhf/laboratorio-final-2:latest
 
       - name: Upload Trivy Report
         uses: actions/upload-artifact@v4
