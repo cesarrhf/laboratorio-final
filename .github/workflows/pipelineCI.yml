@@ -205,7 +205,9 @@ jobs:
     steps:
       - name: Crear red Docker
         run: |
-          docker network rm zap-net 2>/dev/null
+          if (docker network ls --filter name=zap-net -q) {
+            docker network rm zap-net
+          }
           docker network create zap-net
 
       - name: Limpiar contenedores antiguos
