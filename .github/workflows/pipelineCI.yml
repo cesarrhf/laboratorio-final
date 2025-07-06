@@ -240,7 +240,7 @@ jobs:
 
       - name: Limpiar contenedores antiguos
         run: |
-         # docker rm -f $(docker ps -q --filter "ancestor=cesarrhf/laboratorio-final-2:latest") 2>$null
+          docker ps -q --filter "ancestor=cesarrhf/laboratorio-final-2:latest" | xargs -r docker rm -f
 
       - name: Desplegar aplicación
         run: |
@@ -268,7 +268,7 @@ jobs:
           $reportPath = "${{ github.workspace }}\report_json.json"
 
           if (-Not (Test-Path $reportPath)) {
-            Write-Host "No se encontró el archivo report_json.json. Falla el análisis DAST."
+            Write-Host "No se encontro el archivo report_json.json. Falla el analisis DAST."
             exit 1
           }
 
@@ -291,10 +291,10 @@ jobs:
           Write-Host "Alertas Medium: $mediumAlerts"
 
           if ($highAlerts -gt 0 -or $mediumAlerts -gt 0) {
-            Write-Host "Se encontraron vulnerabilidades críticas o medias en OWASP ZAP. Deteniendo el pipeline..."
+            Write-Host "Se encontraron vulnerabilidades criticas o medias en OWASP ZAP. Deteniendo el pipeline..."
             exit 1
           } else {
-            Write-Host "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
+            Write-Host "No se encontraron vulnerabilidades criticas ni medias en OWASP ZAP. Continuando..."
           }
 
 
