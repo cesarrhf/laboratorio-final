@@ -209,7 +209,10 @@ jobs:
 
       - name: Esperar que la aplicación esté lista
         run: |
-          sleep 40 
+          sleep 30 
 
-      
+      - name: OWASP ZAP Scan
+        uses: zaproxy/action-baseline@v0.11.0
+        whit:
+          target: 'http://localhost:3000/'
 # --------------------------------- DEPLOY ---------------------------------
