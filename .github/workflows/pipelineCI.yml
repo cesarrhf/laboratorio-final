@@ -2,7 +2,10 @@ name: Workflow
 on:
   push:
     branches:
-      - feat
+      - '**'
+  pull_request:
+    branches:
+      - '**'
 
 jobs:
 # --------------------------------- BUILD ---------------------------------
