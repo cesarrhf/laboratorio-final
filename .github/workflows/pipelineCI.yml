@@ -110,6 +110,12 @@ jobs:
             else
               echo "No se encontraron vulnerabilidades. Continuando..."
             fi
+
+        - name: Subir reporte como artefacto
+          uses: actions/upload-artifact@v4
+          with:
+            name: reporte-sonarcloud
+            path: sonar_issues_report.json
   # --------------------------------- SCA ---------------------------------
 
   SCA:
