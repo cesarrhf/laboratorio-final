@@ -85,12 +85,30 @@ jobs:
 
             echo "$issueCount" > issue_count.txt
 
+        - name: Crear HTML con link al reporte
+          run: |
+            cat <<EOF > sonar_issues_report.html
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <title>Reporte SonarCloud</title>
+            </head>
+            <body>
+              <h2>Ver reporte de vulnerabilidades en SonarCloud</h2>
+              <p><a href="https://sonarcloud.io/project/issues?id=laboratorio-final-2&resolved=false&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR" target="_blank">
+                Abrir reporte en SonarCloud</a></p>
+            </body>
+            </html>
+            EOF
+
         - name: Subir reporte como artefacto
           uses: actions/upload-artifact@v4
           with:
             name: reporte-sonarcloud
             path: |
               sonar_issues_report.json
+              sonar_issues_report.html
               issue_count.txt
 
         - name: Fallar si hay vulnerabilidades
