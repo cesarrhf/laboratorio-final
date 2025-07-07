@@ -69,22 +69,46 @@ jobs:
               -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
               -Dsonar.branch.name=main
 
-        - name: Validando resultado de SonarCloud
+        - name: Validar y guardar reporte SonarCloud
           run: |
             projectKey="laboratorio-final-2"
             branchName="main"
-        
-            issueCount=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
-              "https://sonarcloud.io/api/issues/search?componentKeys=${projectKey}&branch=${branchName}&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR" \
-              | jq '.total')
+            page=1
+            pageSize=500
+            all_issues="[]"
 
-            echo "Vulnerabilidades críticas/altas/medias encontradas: $issueCount"
+            echo "Descargando todas las vulnerabilidades..."
+
+            while :; do
+              response=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+                "https://sonarcloud.io/api/issues/search?componentKeys=${projectKey}&branch=${branchName}&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR&p=${page}&ps=${pageSize}")
+              
+              issues=$(echo "$response" | jq '.issues')
+              total=$(echo "$response" | jq '.total')
+              fetched=$(echo "$issues" | jq 'length')
+
+              all_issues=$(jq -s '.[0] + .[1]' <(echo "$all_issues") <(echo "$issues"))
+
+              if [ "$fetched" -lt "$pageSize" ]; then
+                break
+              fi
+
+              page=$((page + 1))
+            done
+
+            # Guardar como JSON
+            echo "$all_issues" > sonar_issues_report.json
+            echo "Reporte guardado en sonar_issues_report.json"
+
+            # Verificar si hay issues
+            issueCount=$(echo "$all_issues" | jq 'length')
+            echo "Cantidad total de vulnerabilidades encontradas: $issueCount"
 
             if [ "$issueCount" -gt 0 ]; then
               echo "Se encontraron vulnerabilidades críticas, altas o medias. Deteniendo el pipeline..."
               exit 1
             else
-              echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
+              echo "No se encontraron vulnerabilidades. Continuando..."
             fi
   # --------------------------------- SCA ---------------------------------
 
