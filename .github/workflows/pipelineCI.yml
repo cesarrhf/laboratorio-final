@@ -69,53 +69,39 @@ jobs:
               -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
               -Dsonar.branch.name=main
 
-        - name: Validar y guardar reporte SonarCloud
+        - name: Validar vulnerabilidades y generar reporte
           run: |
             projectKey="laboratorio-final-2"
             branchName="main"
-            page=1
-            pageSize=500
-            all_issues="[]"
+            
+            echo "Consultando SonarCloud..."
+            response=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+              "https://sonarcloud.io/api/issues/search?componentKeys=${projectKey}&branch=${branchName}&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR")
 
-            echo "Descargando todas las vulnerabilidades..."
+            echo "$response" > sonar_issues_report.json
 
-            while :; do
-              response=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
-                "https://sonarcloud.io/api/issues/search?componentKeys=${projectKey}&branch=${branchName}&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR&p=${page}&ps=${pageSize}")
-              
-              issues=$(echo "$response" | jq '.issues')
-              total=$(echo "$response" | jq '.total')
-              fetched=$(echo "$issues" | jq 'length')
+            issueCount=$(echo "$response" | jq '.total')
+            echo "Cantidad de vulnerabilidades encontradas: $issueCount"
 
-              all_issues=$(jq -s '.[0] + .[1]' <(echo "$all_issues") <(echo "$issues"))
-
-              if [ "$fetched" -lt "$pageSize" ]; then
-                break
-              fi
-
-              page=$((page + 1))
-            done
-
-            # Guardar como JSON
-            echo "$all_issues" > sonar_issues_report.json
-            echo "Reporte guardado en sonar_issues_report.json"
-
-            # Verificar si hay issues
-            issueCount=$(echo "$all_issues" | jq 'length')
-            echo "Cantidad total de vulnerabilidades encontradas: $issueCount"
-
-            if [ "$issueCount" -gt 0 ]; then
-              echo "Se encontraron vulnerabilidades críticas, altas o medias. Deteniendo el pipeline..."
-              exit 1
-            else
-              echo "No se encontraron vulnerabilidades. Continuando..."
-            fi
+            echo "$issueCount" > issue_count.txt
 
         - name: Subir reporte como artefacto
           uses: actions/upload-artifact@v4
           with:
             name: reporte-sonarcloud
-            path: sonar_issues_report.json
+            path: |
+              sonar_issues_report.json
+              issue_count.txt
+
+        - name: Fallar si hay vulnerabilidades
+          run: |
+            issueCount=$(cat issue_count.txt)
+            if [ "$issueCount" -gt 0 ]; then
+              echo "Se encontraron vulnerabilidades ($issueCount). Fallando el pipeline..."
+              exit 1
+            else
+              echo "Sin vulnerabilidades bloqueantes."
+            fi
   # --------------------------------- SCA ---------------------------------
 
   SCA:
